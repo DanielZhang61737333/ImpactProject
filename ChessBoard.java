@@ -9,6 +9,10 @@ public class ChessBoard {
 	boolean CPRightRookMove=false;
 	boolean lowerCaseFound=false;
 	boolean isPlayerValidMove=false;
+	boolean PKingMove=false;
+	boolean PLeftRookMove=false;
+	boolean PRightRookMove=false;
+	boolean PlayerPassent=false;
 	moveCoor playermv;
 	moveCoor mv;
 	//String[][] holdBoard;
@@ -94,6 +98,18 @@ public class ChessBoard {
     		board[piecey][piecex]=" ";
     	}
     	
+    	if(playermv.piece.equals("K")) {
+    		PKingMove=true;
+    	}
+    	if(playermv.piece.equals("R")) {
+    		if(playermv.piecex==7) {
+    			PRightRookMove=true;
+    		}
+    		else {
+    			PLeftRookMove=true;
+    		}
+    	}
+    	
     }
     
     public void testMakeMove(int piecex, int piecey, int destx, int desty, String[][] testBoard) {
@@ -129,6 +145,9 @@ public class ChessBoard {
     		}
     		mv=selectAMove(highestWeight);
     		mv.setPiece(board[mv.piecey][mv.piecex]);
+    		if(mv.isPassent==true) {
+    			board[mv.desty+1][mv.destx]=" ";
+    		}
     		if(mv.piece.equals("k")) {
     			CPKingMove=true;
     		}
@@ -137,9 +156,6 @@ public class ChessBoard {
     		}
     		if(mv.piece.equals("r")&&(mv.piecex==7)) {
     			CPRightRookMove=true;
-    		}
-    		if(mv.isPassent==true) {
-    			board[mv.destx][mv.desty+1]=" ";
     		}
     		if(mv.piece.equals("p")) {
     			if(mv.desty==0) {
@@ -308,6 +324,74 @@ public class ChessBoard {
 			}
 			
 			
+    }
+    
+    void collectBothRookMoves(int i,int j,ArrayList<moveCoor> allMoves) {
+    	int targetRow=i;
+    	int targetCol=j;
+    	int [][]offsets={{0,1},{0,-1},{1,0},{-1,0}};
+    	//System.out.println(i);
+    	//System.out.println(j);
+    	if(Character.isLowerCase((board[i][j]).charAt(0))) {
+    		for(int pos=0;pos<4;pos++){
+    			targetRow=i;
+    			targetCol=j;
+    			do{
+    				targetRow=i+offsets[pos][0];
+    				targetCol=i+offsets[pos][1];
+    				if(isInbounds(targetRow, targetCol)) {
+    					if(board[targetRow][targetCol].equals(" ")) {
+    						mv=new moveCoor(targetRow,targetCol,i,j);
+    						mv.setWeight(0);
+    						allMoves.add(mv);
+    					}
+    					if(Character.isUpperCase((board[targetRow][targetCol]).charAt(0))) {
+    						mv=new moveCoor(targetRow,targetCol,i,j);
+    						mv.setWeight(250);
+    						allMoves.add(mv);
+    						break;
+    					}
+    					if(Character.isLowerCase((board[targetRow][targetCol]).charAt(0))) {
+    						break;
+    					}
+    				}
+    				else {
+    					break;
+    				}
+    			}while(true);
+    		}
+    	}
+    	else {
+    		for(int pos=0;pos<4;pos++){
+    			targetRow=i;
+    			targetCol=j;
+    			do{
+    				targetRow=i+offsets[pos][0];
+    				targetCol=i+offsets[pos][1];
+    				if(isInbounds(targetRow, targetCol)) {
+    					if(board[targetRow][targetCol].equals(" ")) {
+    						mv=new moveCoor(targetRow,targetCol,i,j);
+    						mv.setWeight(0);
+    						allMoves.add(mv);
+    					}
+    					if(Character.isLowerCase((board[targetRow][targetCol]).charAt(0))) {
+    						mv=new moveCoor(targetRow,targetCol,i,j);
+    						mv.setWeight(250);
+    						allMoves.add(mv);
+    						break;
+    					}
+    					if(Character.isUpperCase((board[targetRow][targetCol]).charAt(0))) {
+    						break;
+    					}
+    				}
+    				else {
+    					break;
+    				}
+    			}while(true);
+    		}
+    	}
+    	
+    	
     }
     
     
@@ -538,11 +622,15 @@ public class ChessBoard {
     }
     
     boolean isPlayerMoveLegal(int piecex,int piecey,int destx,int desty) {
+    	if((piecey==desty)&&(piecex==destx)) {
+			return false;
+		}
     	if(isInbounds(destx,desty)==false) {
     		return false;
     	}
     	else {
     		if(board[piecey][piecex].equals("P")) {
+    			playermv.setPiece("P");
     			if(piecex==destx) {
     				if(piecey>desty) {
     					return false;
@@ -550,12 +638,16 @@ public class ChessBoard {
     				else {
     					if(piecey==1) {
     						if((desty-piecey==2)||(desty-piecey==1)) {
-    							return true;
+    							if(board[desty][destx].equals(" ")) {
+    								return true;
+    							}
     						}
     					}
     					else {
     						if(desty-piecey==1) {
-    							return true;
+    							if(board[desty][destx].equals(" ")) {
+    								return true;
+    							}
     						}
     						else {
     							return false;
@@ -564,12 +656,41 @@ public class ChessBoard {
     				}
     			}
     			else {
-    				if(piecex+1==destx){
-    					//check if that spot on board is enemy piece, or if en passent applies
-    					//Also check to see if it places king in check
+    				if(piecex+1==destx){//check if that spot on board is enemy piece, or if en passent applies
+    									//Also check to see if it places king in check
+    					if(Character.isLowerCase((board[desty][destx]).charAt(0))) {
+    						return true;
+    					}
+    					else {
+    						if(mv.piece.equals("p")) {
+    							if(mv.desty==desty) {
+    								if(mv.destx==destx+1) {
+    									if(mv.piecey-mv.desty==2) {
+    										board[mv.desty-1][mv.destx]=" ";
+    										return true;
+    									}
+    								}
+    							}
+    						}
+    					}
     				}
     				else if(piecex-1==destx) {
-    					
+    					if(Character.isLowerCase((board[desty][destx]).charAt(0))) {
+    						return true;
+    					}
+    					else {
+    						if(mv.piece.equals("p")) {
+    							if(mv.desty==desty) {
+    								if(mv.destx==destx-1) {
+    									if(mv.piecey-mv.desty==2) {
+    										board[mv.desty-1][mv.destx]=" ";
+    										return true;
+    										
+    									}
+    								}
+    							}
+    						}
+    					}
     				}
     				else {
     					return false;
@@ -577,30 +698,239 @@ public class ChessBoard {
     			}
     		}
     		else if(board[piecey][piecex].equals("R")) {
+    			playermv.setPiece("R");
+    			if((board[desty][destx]==" ")||(Character.isLowerCase((board[desty][destx]).charAt(0)))) {
+					if((piecey==desty)&&(piecex!=destx)) {
+						if(piecex>destx) {
+							for(int i=1;i<(piecex-destx)-1;i++) {
+								if(board[desty][piecex-i]!=" ") {
+									return false;
+								}
+							}
+							return true;
+						}
+						else {
+							for(int i=1;i<(destx-piecex)-1;i++) {
+								if(board[desty][destx-i]!=" ") {
+									return false;
+								}
+							}
+							return true;
+						}
+					}
+					else if((piecex==destx)&&(piecey!=desty)) {
+						if(piecey>desty) {
+							for(int i=1;i<(piecey-desty)-1;i++) {
+								if(board[destx][piecey-i]!=" ") {
+									return false;
+								}
+							}
+							return true;
+						}
+						else {
+							for(int i=1;i<(desty-piecey)-1;i++) {
+								if(board[destx][desty-i]!=" ") {
+									return false;
+								}
+							}
+							return true;
+						}
+					}
+					else {
+						return false;
+					}
+				}
+    			else {
+    				return false;
+    			}
     			//Just see if coordinate is either an enemy piece or open. If not, reject.
     			//Then check to see if lane is still open.
     			//Also check to see that it remains in either the same row or column, never both at once. And if places king in check
     		}
-    		else if(board[piecey][piecex].equals("N")) {
-    			//Check to see if space is enemy piece or open, and if it places king in check
+    		else if(board[piecey][piecex].equals("N")) {//i is row
+    			playermv.setPiece("N");
+    			boolean isLegalCoor=false;
+    			for(int f=0;f<8;f++) {
+    				if((desty==piecey+knightOffset[f][0])&&(destx==piecex+knightOffset[f][1])) {
+    					isLegalCoor=true;
+    				}
+    			}
+    			if(isLegalCoor==false) {
+    				return false;
+    			}
+    			else {
+    				if((board[desty][destx]==" ")||(Character.isLowerCase((board[desty][destx]).charAt(0)))) {
+    					return true;
+    				}
+    			}
     		}
     		else if(board[piecey][piecex].equals("B")) {
-    			//Same theory as rook, except see if both row and column changed, never both at once. And if by same factor.
-    			//And see if it exposes king to check
+    			int factor=Math.abs(piecey-desty);
+    			playermv.setPiece("B");
+    			if((board[desty][destx]==" ")||(Character.isLowerCase((board[desty][destx]).charAt(0)))) {
+    				if(Math.abs(piecey-desty)==Math.abs(piecex-destx)) {
+    					if(piecex>destx) {//moving left
+    						if(piecey>desty) {//moving up   -,-
+    							for(int i=1;i<factor;i++){
+    								if(board[piecey-i][piecex-i]!=" "){
+    									return false;
+    								}
+    							}
+    							return true;
+    						}
+    						else if(piecey<desty) {//moving down   -,+
+    							for(int i=1;i<factor;i++){
+    								if(board[piecey+i][piecex-i]!=" "){
+    									return false;
+    								}
+    							}
+    							return true;
+    						}
+    						else {
+    							return false;
+    						}
+    					}
+    					else if(piecex<destx){//moving right 
+    						if(piecey>desty) {//moving up   +,-
+    							for(int i=1;i<factor;i++){
+    								if(board[piecey-i][piecex+i]!=" "){
+    									return false;
+    								}
+    							}
+    							return true;
+    						}
+    						else if(piecey<desty) {//moving down   +,+
+    							for(int i=1;i<factor;i++){
+    								if(board[piecey+i][piecex+i]!=" "){
+    									return false;
+    								}
+    							}
+    							return true;
+    						}
+    						else {
+    							return false;
+    						}
+    					}
+    					else {
+    						return false;
+    					}
+    				}
+    				else {
+    					return false;
+    				}
+    			}
+    			else {
+    				return false;
+    			}
     		}
     		else if(board[piecey][piecex].equals("K")) {
+    			playermv.setPiece("K");
     			//Just see if it's open or occupied by enemy piece, and if it puts it in danger
     		}
     		else if(board[piecey][piecex].equals("Q")) {
+    			playermv.setPiece("Q");
+    			int factor=Math.abs(piecey-desty);
     			//same theory as everything else
+    			if((board[desty][destx]==" ")||(Character.isLowerCase((board[desty][destx]).charAt(0)))) {
+    				if(Math.abs(piecey-desty)==Math.abs(piecex-destx)){
+    					if(piecex>destx) {//moving left
+    						if(piecey>desty) {//moving up   -,-
+    							for(int i=1;i<factor;i++){
+    								if(board[piecey-i][piecex-i]!=" "){
+    									return false;
+    								}
+    							}
+    							return true;
+    						}
+    						else if(piecey<desty) {//moving down   -,+
+    							for(int i=1;i<factor;i++){
+    								if(board[piecey+i][piecex-i]!=" "){
+    									return false;
+    								}
+    							}
+    							return true;
+    						}
+    						else {
+    							return false;
+    						}
+    					}
+    					else if(piecex<destx){//moving right 
+    						if(piecey>desty) {//moving up   +,-
+    							for(int i=1;i<factor;i++){
+    								if(board[piecey-i][piecex+i]!=" "){
+    									return false;
+    								}
+    							}
+    							return true;
+    						}
+    						else if(piecey<desty) {//moving down   +,+
+    							for(int i=1;i<factor;i++){
+    								if(board[piecey+i][piecex+i]!=" "){
+    									return false;
+    								}
+    							}
+    							return true;
+    						}
+    						else {
+    							return false;
+    						}
+    					}
+    					else {
+    						return false;
+    					}
+    				}
+    				else if(piecey==desty) {
+    					if((piecey==desty)&&(piecex!=destx)) {
+    						if(piecex>destx) {
+    							for(int i=1;i<(piecex-destx)-1;i++) {
+    								if(board[desty][piecex-i]!=" ") {
+    									return false;
+    								}
+    							}
+    							return true;
+    						}
+    						else {
+    							for(int i=1;i<(destx-piecex)-1;i++) {
+    								if(board[desty][destx-i]!=" ") {
+    									return false;
+    								}
+    							}
+    							return true;
+    						}
+    					}
+    				}
+    				else if(piecex==destx) {
+    					 if((piecex==destx)&&(piecey!=desty)) {
+    							if(piecey>desty) {
+    								for(int i=1;i<(piecey-desty)-1;i++) {
+    									if(board[destx][piecey-i]!=" ") {
+    										return false;
+    									}
+    								}
+    								return true;
+    							}
+    							else {
+    								for(int i=1;i<(desty-piecey)-1;i++) {
+    									if(board[destx][desty-i]!=" ") {
+    										return false;
+    									}
+    								}
+    								return true;
+    							}
+    						}
+    				}
+    				else {
+    					return false;
+    				}
+    			}
     		}
     		else {
-    			isPlayerValidMove=false;
+    			return false;
     		}
     		return false;
-    	}
-    	
-    	
+    		
+    		
+    		}
     }
     
     void collectShortCastle(int i, int j, ArrayList<moveCoor> allMoves) {
@@ -877,10 +1207,6 @@ public class ChessBoard {
     	if(lowerCaseFound=false) {
 			return false;
 		}
-    	
-    	
-    	
-    	
     	return true;
     }
 
@@ -939,6 +1265,10 @@ public class ChessBoard {
     		if(isSafe(kingRow,kingCol,testBoard)==false) {
     			allMoves.remove(i);
     			i--;
+    		}
+    		if(allMoves.size()==0) {
+    			System.out.println("You won. Must be fun huh, having no life.");
+    			System.exit(0);
     		}
     	}
     	
